@@ -1,0 +1,15 @@
+[
+  {
+    "skill_id": "image-gen-http-api-v1",
+    "title": "Image Generation via HTTP API",
+    "status": "published",
+    "version": "1.0.0",
+    "path": "skills\\published\\image-gen-http-api-v1.md",
+    "updated_at": "2026-02-27T17:39:08.242768+00:00",
+    "tags": [
+      "api",
+      "generation",
+      "image"
+    ]
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "source": "seed_reference",
+  "created_at": "2026-02-27T00:00:00Z",
+  "score_field": "score",
+  "models": [
+    {
+      "name": "open_ref_alpha",
+      "score": 0.89
+    },
+    {
+      "name": "open_ref_beta",
+      "score": 0.84
+    },
+    {
+      "name": "open_ref_gamma",
+      "score": 0.77
+    }
+  ]
+}

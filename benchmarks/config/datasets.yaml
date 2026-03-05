@@ -1,0 +1,20 @@
+datasets:
+  hotpot_qa:
+    provider: huggingface
+    dataset_id: hotpot_qa
+    config: distractor
+    split: validation
+    question_field: question
+    answer_field: answer
+  two_wiki:
+    provider: huggingface
+    dataset_id: scholarly-shadows-syndicate/2wikimultihopqa
+    split: validation
+    question_field: question
+    answer_field: answer
+leaderboards:
+  galileo:
+    snapshot_dir: benchmarks/reference_data/leaderboards/galileo/snapshots
+  open_llm:
+    snapshot_dir: benchmarks/reference_data/leaderboards/open_llm/snapshots
+

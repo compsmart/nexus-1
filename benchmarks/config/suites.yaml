@@ -1,0 +1,114 @@
+defaults:
+  profile: quality_first
+  primary_suite: memory_recall
+  suite_order:
+    - memory_recall
+    - multihop
+    - scalability
+    - learning_transfer
+    - composite
+profiles:
+  quality_first:
+    description: Accuracy-first profile with larger sample sizes.
+    suite_overrides:
+      memory_recall:
+        include_indirect_questions: true
+      multihop:
+        dataset_samples:
+          hotpot_qa: 100
+          two_wiki: 100
+      learning_transfer:
+        task_repetitions: 2
+      composite:
+        num_cases: 40
+
+  smoke:
+    description: Fast sanity-check profile with tiny sample sizes.
+    suite_overrides:
+      memory_recall:
+        include_indirect_questions: false
+      multihop:
+        dataset_samples:
+          hotpot_qa: 4
+          two_wiki: 4
+      learning_transfer:
+        task_repetitions: 1
+      composite:
+        num_cases: 6
+suites:
+  memory_recall:
+    module: benchmarks.suites.memory_recall.suite
+    class: MemoryRecallSuite
+    enabled: true
+    config:
+      include_indirect_questions: true
+  multihop:
+    module: benchmarks.suites.multihop_hf.suite
+    class: MultiHopHFSuite
+    enabled: true
+    config:
+      split: validation
+      docs_per_case: 8
+      dataset_samples:
+        hotpot_qa: 32
+        two_wiki: 32
+  scalability:
+    module: benchmarks.suites.scalability.suite
+    class: ScalabilitySuite
+    enabled: true
+    config:
+      k_values: [10, 25, 50, 100, 200, 500]
+      n_queries: 20
+  learning_transfer:
+    module: benchmarks.suites.learning_transfer.suite
+    class: LearningTransferSuite
+    enabled: true
+    config:
+      task_repetitions: 1
+  composite:
+    module: benchmarks.suites.composite.suite
+    class: CompositeSuite
+    enabled: true
+    config:
+      num_cases: 24
+      category_weights:
+        reasoning: 0.30
+        memory: 0.25
+        multi_hop: 0.25
+        learning: 0.20
+
+  # Deprecated — kept for old run replay
+  galileo_agent:
+    module: benchmarks.suites.galileo_agent.suite
+    class: GalileoAgentSuite
+    enabled: false
+    config:
+      num_cases: 24
+      category_weights:
+        reasoning: 0.30
+        memory: 0.25
+        multi_hop: 0.25
+        learning: 0.20
+  multihop_hf:
+    module: benchmarks.suites.multihop_hf.suite
+    class: MultiHopHFSuite
+    enabled: false
+    config:
+      split: validation
+      docs_per_case: 8
+      dataset_samples:
+        hotpot_qa: 32
+        two_wiki: 32
+  multihop_support_hf:
+    module: benchmarks.suites.multihop_support_hf.suite
+    class: MultiHopSupportHFSuite
+    enabled: false
+    config:
+      split: validation
+      docs_per_case: 8
+  logic_puzzles:
+    module: benchmarks.suites.logic_puzzles.suite
+    class: LogicPuzzleSuite
+    enabled: false
+    config:
+      include_hard_set: false

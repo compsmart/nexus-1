@@ -1,0 +1,56 @@
+defaults:
+  baseline_order:
+    - nexus1
+    - rag
+    - llm_only
+baselines:
+  nexus1:
+    module: benchmarks.baselines.amm_agent
+    class: AMMAgentBaseline
+    enabled: true
+    config:
+      deterministic: true
+      retrieval_hop2_enabled: true
+      retrieval_hop2_strategy: hybrid
+  rag:
+    module: benchmarks.baselines.rag_phi
+    class: RAGPhiBaseline
+    enabled: true
+    config:
+      top_k_docs: 5
+      max_context_chars: 6000
+  llm_only:
+    module: benchmarks.baselines.phi_only
+    class: PhiOnlyBaseline
+    enabled: true
+    config:
+      answer_style: concise
+  nexus2:
+    module: benchmarks.baselines.nexus2_adapter
+    class: Nexus2AdapterBaseline
+    enabled: false
+    config:
+      device: cuda
+
+  # Deprecated — kept for backward compat with old run replay
+  amm_agent:
+    module: benchmarks.baselines.amm_agent
+    class: AMMAgentBaseline
+    enabled: false
+    config:
+      deterministic: true
+      retrieval_hop2_enabled: true
+      retrieval_hop2_strategy: hybrid
+  rag_phi:
+    module: benchmarks.baselines.rag_phi
+    class: RAGPhiBaseline
+    enabled: false
+    config:
+      top_k_docs: 5
+      max_context_chars: 6000
+  phi_only:
+    module: benchmarks.baselines.phi_only
+    class: PhiOnlyBaseline
+    enabled: false
+    config:
+      answer_style: concise
