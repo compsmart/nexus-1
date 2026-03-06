@@ -332,6 +332,7 @@ class AGIAgent:
     def _compute_confidence_gate(
         self,
         retrieved: List[Tuple],
+        top_k: int = 5,
     ) -> Tuple[str, float]:
         if not self.config.confidence_gate_enabled or not retrieved:
             return ("fallback", 0.0) if not retrieved else ("inject", 1.0)
@@ -356,14 +357,34 @@ class AGIAgent:
         max_entropy = math.log(max(len(probs), 2))
         entropy_norm = entropy / max_entropy if max_entropy > 0 else 0.0
 
-        # Logistic regression: sigmoid(w·x + b)
+        # Fraction of top_k slots that returned results (D-217: n_active_frac feature).
+        # Low n_active_frac + low raw_cos_max = strong NO_MEMORY signal.
+        n_active_frac = len(retrieved) / max(top_k, 1)
+
+        # Stage 1 — NO_MEMORY fast-path (D-217 two-stage gate).
+        # When both cosine max and coverage fraction are very low, the query entity
+        # is almost certainly not in the memory bank. Injecting weak unrelated
+        # memories here causes hallucination. Skip LR and suppress context.
+        if (
+            raw_cos_max < self.config.confidence_gate_nomemory_cos_threshold
+            and n_active_frac <= self.config.confidence_gate_nomemory_frac_threshold
+        ):
+            logging.info(
+                "Confidence gate: NO_MEMORY fast-path (cos_max=%.3f, frac=%.2f), "
+                "suppressing memory context.",
+                raw_cos_max, n_active_frac,
+            )
+            return ("fallback", 0.0)
+
+        # Stage 2 — Logistic regression: sigmoid(w·x + b)
         coeffs = self.config.confidence_gate_coefficients
         w1 = coeffs[0] if len(coeffs) > 0 else 15.0
         w2 = coeffs[1] if len(coeffs) > 1 else 5.0
         w3 = coeffs[2] if len(coeffs) > 2 else -3.0
+        w4 = coeffs[3] if len(coeffs) > 3 else 4.0
         b = self.config.confidence_gate_intercept
 
-        logit = w1 * raw_cos_max + w2 * raw_cos_margin + w3 * entropy_norm + b
+        logit = w1 * raw_cos_max + w2 * raw_cos_margin + w3 * entropy_norm + w4 * n_active_frac + b
         logit = max(-20.0, min(20.0, logit))  # clamp for numerical stability
         p = 1.0 / (1.0 + math.exp(-logit))
 
@@ -1078,9 +1099,9 @@ class AGIAgent:
             if hydrated_skills:
                 context_str += f"\n[Skill Playbooks]\n{hydrated_skills}\n"
 
-            # Confidence gate (D-216, D-223, D-227) -------------------------
-            # 3-feature LR replaces the old fixed-threshold warning.
-            gate_mode, gate_p = self._compute_confidence_gate(retrieved_1)
+            # Confidence gate (D-216, D-223, D-227, D-217) ------------------
+            # 4-feature LR + Stage 1 NO_MEMORY fast-path.
+            gate_mode, gate_p = self._compute_confidence_gate(retrieved_1, top_k=top_k)
             if gate_mode == "hedge":
                 context_str = (
                     f"[Memory confidence moderate ({gate_p:.2f}) — "
@@ -1088,7 +1109,7 @@ class AGIAgent:
                     + context_str
                 )
             elif gate_mode == "fallback":
-                # Low confidence: don't inject memory, let LLM answer from knowledge
+                # Low confidence or NO_MEMORY: suppress context, let LLM answer from knowledge
                 context_str = ""
                 logging.info(
                     "Confidence gate: fallback mode (p=%.3f), suppressing memory context.",
@@ -1284,8 +1305,8 @@ class AGIAgent:
             if hydrated_skills:
                 context_str += f"\n[Skill Playbooks]\n{hydrated_skills}\n"
 
-            # Confidence gate (D-216, D-223, D-227)
-            gate_mode, gate_p = self._compute_confidence_gate(retrieved_1)
+            # Confidence gate (D-216, D-223, D-227, D-217)
+            gate_mode, gate_p = self._compute_confidence_gate(retrieved_1, top_k=top_k)
             if gate_mode == "hedge":
                 context_str = (
                     f"[Memory confidence moderate ({gate_p:.2f}) — "

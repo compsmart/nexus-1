@@ -32,18 +32,24 @@ class AgentConfig:
     retrieval_keyword_prefilter_factor: int = 20
     memory_dedup_enabled: bool = True
 
-    # Confidence gate (D-216, D-223, D-227)
-    # 3-feature LR trained on real AMM episodes: 0.9% hallucination at 100% coverage.
-    # Features: raw_cos_max, raw_cos_margin, entropy_norm
+    # Confidence gate (D-216, D-223, D-227, D-217)
+    # 4-feature LR: raw_cos_max, raw_cos_margin, entropy_norm, n_active_frac.
+    # Stage 1 (D-217): explicit NO_MEMORY fast-path using raw_cos_max + n_active_frac.
+    # 0.9% hallucination at 100% coverage on 3-feature baseline; D-217 targets further reduction.
     confidence_gate_enabled: bool = True
     confidence_gate_coefficients: list[float] = field(default_factory=lambda: [
         12.0,   # raw_cos_max — dominant signal (Cohen's d=3.18)
         3.0,    # raw_cos_margin — top1-top2 gap
         -1.5,   # entropy_norm — high entropy = less certain
+        4.0,    # n_active_frac — fraction of top_k slots with results (D-217)
     ])
     confidence_gate_intercept: float = -4.0
     confidence_gate_inject_threshold: float = 0.7
     confidence_gate_hedge_threshold: float = 0.3
+    # Stage 1 NO_MEMORY fast-path: if both conditions hold, skip LR and return fallback.
+    # Avoids injecting unrelated weak memories when query entity is not in the memory bank.
+    confidence_gate_nomemory_cos_threshold: float = 0.38
+    confidence_gate_nomemory_frac_threshold: float = 0.20
     memory_dedup_scope: str = "exact_text"
     memory_dedup_types: set[str] = field(default_factory=lambda: {
         "fact",
