@@ -5,8 +5,8 @@ defaults:
     - llm_only
 baselines:
   nexus1:
-    module: benchmarks.baselines.amm_agent
-    class: AMMAgentBaseline
+    module: benchmarks.baselines.amm_shortcut
+    class: AMMShortcutBaseline
     enabled: true
     config:
       deterministic: true
