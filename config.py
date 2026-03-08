@@ -28,7 +28,7 @@ class AgentConfig:
     retrieval_top_k_max: int = 15
     retrieval_confidence_threshold: float = 0.25
     retrieval_keyword_prefilter_enabled: bool = True
-    retrieval_keyword_prefilter_min_pool: int = 100
+    retrieval_keyword_prefilter_min_pool: int = 20
     retrieval_keyword_prefilter_factor: int = 20
     memory_dedup_enabled: bool = True
 
