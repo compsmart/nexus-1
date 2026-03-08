@@ -1,8 +1,6 @@
 defaults:
   baseline_order:
     - nexus1
-    - rag
-    - llm_only
 baselines:
   nexus1:
     module: benchmarks.baselines.amm_shortcut
