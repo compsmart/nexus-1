@@ -3,15 +3,9 @@ transformers
 accelerate
 sentence-transformers
 colorama
-pyttsx3
-SpeechRecognition
-pyaudio
 bitsandbytes
-ddgs
 requests
 beautifulsoup4
-playwright
 datasets
 pyyaml
-streamlit
 pytest
