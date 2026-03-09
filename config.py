@@ -92,10 +92,25 @@ class AgentConfig:
     retrieval_hop2_pattern_top_k_per_query: int = 2
     retrieval_hop2_pattern_threshold_scale: float = 1.0
     hop2_bridge_patterns: list[str] = field(default_factory=lambda: [
-        r"\b(?:is|was|are|were)\s+(?:led|managed|owned|supervised|coordinated|run|handled)\s+by\s+(?P<entity>[A-Za-z][A-Za-z'\-]+(?:\s+[A-Za-z][A-Za-z'\-]+){0,2})",
-        r"\b(?:leader|manager|owner|supervisor|coordinator)\s+is\s+(?P<entity>[A-Za-z][A-Za-z'\-]+(?:\s+[A-Za-z][A-Za-z'\-]+){0,2})",
-        r"\b(?P<entity>[A-Za-z][A-Za-z'\-]+(?:\s+[A-Za-z][A-Za-z'\-]+){0,2})\s+(?:is|was)\s+(?:based|located)\s+in\b",
-        r"\bby\s+(?P<entity>[A-Za-z][A-Za-z'\-]+(?:\s+[A-Za-z][A-Za-z'\-]+){0,2})\b",
+        # Passive "verb by ENTITY" — directed/written/produced/led/founded etc.
+        # Stops at a word boundary (comma, preposition, or end) to avoid over-capture.
+        r"\b(?:is|was|are|were)\s+(?:led|managed|owned|supervised|coordinated|run|handled|"
+        r"directed|produced|written|authored|founded|created|edited|designed|"
+        r"composed|invented|discovered|established|pioneered)\s+"
+        r"by\s+(?P<entity>[A-Za-z][A-Za-z'\-]+(?:\s+[A-Z][A-Za-z'\-]+){0,2})(?=[,\.\s]|$)",
+        # Role-noun "is/was ENTITY" — leader, director, author, founder, CEO etc.
+        r"\b(?:leader|manager|owner|supervisor|coordinator|director|founder|author|creator|"
+        r"ceo|president|chairman|editor|producer|writer|composer|inventor|designer|"
+        r"coach|captain|host|narrator)\s+"
+        r"(?:is|was|are|were)\s+(?P<entity>[A-Za-z][A-Za-z'\-]+(?:\s+[A-Z][A-Za-z'\-]+){0,2})(?=[,\.\s]|$)",
+        # ENTITY born/raised/based/located in — subject is the bridge person/org
+        r"\b(?P<entity>[A-Z][A-Za-z'\-]+(?:\s+[A-Z][A-Za-z'\-]+){0,2})\s+"
+        r"(?:is|was|were|are)\s+(?:born|raised|based|located|headquartered)\s+in\b",
+        # "by ENTITY" fallback — stops at comma, preposition, or end of name
+        r"\bby\s+(?P<entity>[A-Za-z][A-Za-z'\-]+(?:\s+[A-Z][A-Za-z'\-]+){0,2})(?=[,\.\s]|$)",
+        # Named entity "ENTITY, a/an <role>" — appositive for named individuals
+        # Requires two-word (capital) name to avoid false positives on pronouns.
+        r"(?P<entity>[A-Z][A-Za-z'\-]+\s+[A-Z][A-Za-z'\-]+(?:\s+[A-Z][A-Za-z'\-]+)?)\s*,\s*(?:a|an|the)\s+\w+",
     ])
     hop2_location_intent_patterns: list[str] = field(default_factory=lambda: [
         r"\b(where|which city|what city|based in|located in|work from|works from|work in|works out of|work out of|located)\b",

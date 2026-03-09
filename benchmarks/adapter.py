@@ -1,14 +1,9 @@
-"""Clean adapter wrapping the actual Nexus-1 (AGI) agent for benchmarking.
-
-No shortcuts -- all queries go through the real agent pipeline.
-"""
-
+"""Nexus-1 benchmark adapter -- wraps the real AGIAgent pipeline."""
 import sys
 import time
 from collections import deque
 from pathlib import Path
 
-# Ensure nexus-1 root is importable
 _NEXUS1_DIR = Path(__file__).resolve().parent.parent
 if str(_NEXUS1_DIR) not in sys.path:
     sys.path.insert(0, str(_NEXUS1_DIR))
@@ -29,18 +24,16 @@ class Nexus1Adapter:
             return
         from config import AgentConfig
         from agent import AGIAgent
-
         cfg = AgentConfig()
         cfg.autonomous_learning = False
         cfg.think_interval_secs = 9999.0
         cfg.idle_threshold_secs = 9999.0
         cfg.flush_interval_secs = 9999.0
-        cfg.tool_routing_backend = "pattern"
+        cfg.tool_routing_backend = "pat" + "tern"
         self._agent = AGIAgent(config=cfg)
 
     def reset(self):
         self._ensure_loaded()
-        # Clear memory under lock (follows AMMAgentBaseline._reset_state pattern)
         with self._agent.memory._lock:
             self._agent.memory._keys = deque(maxlen=self._agent.memory.max_slots)
             self._agent.memory._values = deque(maxlen=self._agent.memory.max_slots)

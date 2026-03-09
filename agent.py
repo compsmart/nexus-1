@@ -138,7 +138,7 @@ class AGIAgent:
         self._fact_forget_rules = self._compile_fact_forget_rules(
             self.config.fact_forget_rules
         )
-        self._hop2_bridge_res = self._compile_patterns(
+        self._hop2_bridge_res = self._compile_case_sensitive_patterns(
             self.config.hop2_bridge_patterns
         )
         self._hop2_location_intent_res = self._compile_patterns(
@@ -156,6 +156,10 @@ class AGIAgent:
 
     def _compile_patterns(self, patterns: List[str]) -> List[re.Pattern]:
         return [re.compile(p, re.IGNORECASE) for p in patterns if p]
+
+    def _compile_case_sensitive_patterns(self, patterns: List[str]) -> List[re.Pattern]:
+        """Compile patterns without IGNORECASE for proper-noun detection."""
+        return [re.compile(p) for p in patterns if p]
 
     def _get_system_prompt(self) -> str:
         tool_key = tuple(
@@ -479,24 +483,44 @@ class AGIAgent:
         if not hop1:
             return []
         hop2_messages = [
-            {"role": "system", "content": "You are a memory retrieval assistant. Be concise."},
+            {
+                "role": "system",
+                "content": (
+                    "You are a memory retrieval assistant. "
+                    "Your job is to identify the KEY BRIDGE ENTITY from retrieved context "
+                    "and produce a precise search query to find the missing piece of information."
+                ),
+            },
             {
                 "role": "user",
                 "content": (
-                    f"User message: '{user_input}'\n"
-                    "Retrieved memories:\n"
-                    + "\n".join(f"- {m[0]}" for m in hop1)
-                    + "\nIs there additional related information worth searching for? "
-                    "Output a short search query if yes, otherwise output 'NONE'."
+                    f"Question: '{user_input}'\n\n"
+                    "Retrieved context:\n"
+                    + "\n".join(f"- {m[0]}" for m in hop1[:5])
+                    + "\n\nTask: Identify the bridge entity (person, place, or organization) "
+                    "in the context that connects to the question's answer. "
+                    "Then output ONE search query to find more facts about that entity.\n"
+                    "Format your response as: QUERY: <search query>\n"
+                    "If all needed facts are already in the context, respond: NONE"
                 ),
             },
         ]
-        hop2_query = self.llm.chat(
+        hop2_response = self.llm.chat(
             hop2_messages,
             max_new_tokens=self.config.max_new_tokens_extraction,
             temperature=self.config.temperature_extraction,
         )
-        if not hop2_query or "NONE" in hop2_query.upper():
+        if not hop2_response:
+            return []
+        hop2_upper = hop2_response.upper()
+        if "NONE" in hop2_upper and "QUERY:" not in hop2_upper:
+            return []
+        # Parse "QUERY: <query>" prefix; fall back to using full response
+        hop2_query = hop2_response.strip()
+        if "QUERY:" in hop2_response.upper():
+            idx = hop2_response.upper().index("QUERY:")
+            hop2_query = hop2_response[idx + 6:].strip().split("\n")[0].strip()
+        if not hop2_query or hop2_query.upper() == "NONE":
             return []
         threshold = (
             self.config.retrieval_threshold
@@ -504,7 +528,7 @@ class AGIAgent:
         )
         threshold = max(0.0, min(1.0, threshold))
         return self.memory.retrieve(
-            hop2_query.strip(),
+            hop2_query,
             top_k=self.config.retrieval_hop2_pattern_top_k_per_query,
             threshold=threshold,
             exclude_types={"reflection", "user_input", "agent_response"},
